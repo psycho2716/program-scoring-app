@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* RSU Sovereign Score — deep teal-navy + gold */
+    --background: 210 45% 7%;
+    --foreground: 210 20% 96%;
+    --card: 210 35% 12%;
+    --card-foreground: 210 20% 96%;
+    --popover: 210 35% 11%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 45 93% 53%;
+    --primary-foreground: 210 45% 8%;
+    --secondary: 210 28% 16%;
+    --secondary-foreground: 210 20% 96%;
+    --muted: 210 24% 16%;
+    --muted-foreground: 210 12% 62%;
+    --accent: 210 28% 18%;
+    --accent-foreground: 210 20% 96%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 45 40% 50% / 0.18;
+    --input: 210 20% 22%;
+    --ring: 45 93% 53%;
+    --radius: 0.9rem;
+
+    --rsu-gold: 45 93% 53%;
+    --rsu-gold-soft: 45 80% 62%;
+    --rsu-teal: 168 65% 48%;
+    --rsu-teal-deep: 195 55% 18%;
+    --rsu-success: 152 60% 45%;
+    --rsu-surface: 210 38% 10%;
+
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply min-h-screen bg-background font-sans text-foreground antialiased;
+    font-family: var(--font-plus-jakarta-sans), "Plus Jakarta Sans", ui-sans-serif, system-ui,
+      sans-serif;
+    font-feature-settings: "ss01" on, "cv11" on;
+  }
+}
+
+@layer components {
+  .stage-bg {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(20, 120, 100, 0.28), transparent 55%),
+      radial-gradient(circle at 15% 80%, rgba(212, 160, 30, 0.08), transparent 40%),
+      radial-gradient(circle at 85% 20%, rgba(30, 90, 110, 0.22), transparent 45%),
+      linear-gradient(180deg, #07131c 0%, #0a1a24 40%, #061018 100%);
+  }
+
+  .admin-bg {
+    background:
+      radial-gradient(ellipse 60% 40% at 80% 0%, rgba(212, 160, 30, 0.07), transparent 50%),
+      radial-gradient(ellipse 50% 35% at 10% 100%, rgba(20, 140, 120, 0.1), transparent 50%),
+      linear-gradient(180deg, #07131c 0%, #0c1c28 50%, #08141c 100%);
+  }
+
+  .login-bg {
+    background:
+      radial-gradient(ellipse 70% 55% at 50% 45%, rgba(18, 70, 65, 0.55), transparent 70%),
+      radial-gradient(circle at 50% 50%, #0d2a2a 0%, #071820 55%, #040e14 100%);
+  }
+
+  .gold-border-card {
+    @apply relative rounded-2xl border border-amber-400/25 bg-[#121f2c]/90 shadow-[0_0_40px_rgba(212,160,30,0.08)] backdrop-blur-xl;
+  }
+
+  .gold-glow-ring {
+    box-shadow:
+      0 0 0 1px rgba(212, 160, 30, 0.35),
+      0 0 28px rgba(212, 160, 30, 0.25);
+  }
+
+  .corner-frame {
+    @apply relative;
+  }
+
+  .corner-frame::before,
+  .corner-frame::after {
+    content: "";
+    @apply pointer-events-none absolute h-8 w-8 border-amber-400/70;
+  }
+
+  .corner-frame::before {
+    @apply left-3 top-3 border-l-2 border-t-2;
+  }
+
+  .corner-frame::after {
+    @apply bottom-3 right-3 border-b-2 border-r-2;
+  }
+
+  .corner-frame-all {
+    @apply relative;
+  }
+
+  .corner-frame-all::before,
+  .corner-frame-all::after {
+    content: "";
+    @apply pointer-events-none absolute h-7 w-7 border-amber-400/80;
+  }
+
+  .corner-frame-all::before {
+    @apply left-2 top-2 border-l-2 border-t-2;
+  }
+
+  .corner-frame-all::after {
+    @apply bottom-2 right-2 border-b-2 border-r-2;
+  }
+
+  .corner-frame-all > .corner-tr,
+  .corner-frame-all > .corner-bl {
+    @apply pointer-events-none absolute h-7 w-7 border-amber-400/80;
+  }
+
+  .corner-frame-all > .corner-tr {
+    @apply right-2 top-2 border-r-2 border-t-2;
+  }
+
+  .corner-frame-all > .corner-bl {
+    @apply bottom-2 left-2 border-b-2 border-l-2;
+  }
+
+  .status-dot {
+    @apply inline-block h-2 w-2 rounded-full;
+  }
+
+  .matrix-cell {
+    @apply mx-auto flex h-8 w-8 items-center justify-center rounded-md border transition;
+  }
+
+  .matrix-cell-empty {
+    @apply border-white/15 bg-transparent;
+  }
+
+  .matrix-cell-progress {
+    @apply border-amber-400/60 bg-amber-400/15;
+  }
+
+  .matrix-cell-done {
+    @apply border-teal-400/50 bg-teal-500/20 text-teal-300;
+  }
+}
+
+.spotlight {
+  @apply pointer-events-none absolute h-72 w-72 rounded-full opacity-30 blur-3xl;
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+.spotlight-left {
+  @apply -left-20 top-10 bg-teal-500/25;
+}
+
+.spotlight-right {
+  @apply -right-20 bottom-10 bg-amber-400/20;
+  animation-delay: 1.5s;
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.45;
+  }
+}
+
+@keyframes successPop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-success-pop {
+  animation: successPop 0.55s ease-out both;
+}
