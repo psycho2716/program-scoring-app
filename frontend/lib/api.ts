@@ -1,11 +1,70 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const configuredSocketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
+
+function isLocalhostHostname(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+function stripTrailingSlash(url: string): string {
+  return url.replace(/\/$/, "");
+}
+
+interface ServiceBase {
+  api: string;
+  socket: string;
+  useSocketPath: boolean;
+}
+
+/** Resolve API/socket base URLs for localhost vs LAN (no manual env on judge tablets). */
+function getServiceBase(): ServiceBase {
+  if (typeof window === "undefined") {
+    const fallback = configuredApiUrl ?? "http://localhost:4000";
+    return {
+      api: stripTrailingSlash(fallback),
+      socket: stripTrailingSlash(configuredSocketUrl ?? fallback),
+      useSocketPath: false,
+    };
+  }
+
+  const { origin, hostname } = window.location;
+
+  if (
+    configuredApiUrl &&
+    !configuredApiUrl.includes("localhost") &&
+    !configuredApiUrl.includes("127.0.0.1")
+  ) {
+    return {
+      api: stripTrailingSlash(configuredApiUrl),
+      socket: stripTrailingSlash(configuredSocketUrl ?? configuredApiUrl),
+      useSocketPath: false,
+    };
+  }
+
+  // Opened via LAN IP: proxy /api, /uploads, and /socket.io through Next (port 3000).
+  if (!isLocalhostHostname(hostname)) {
+    return { api: origin, socket: origin, useSocketPath: true };
+  }
+
+  const local = configuredApiUrl ?? "http://localhost:4000";
+  return {
+    api: stripTrailingSlash(local),
+    socket: stripTrailingSlash(configuredSocketUrl ?? local),
+    useSocketPath: false,
+  };
+}
 
 export function getApiUrl(path: string): string {
-  return `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const { api } = getServiceBase();
+  return `${api}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 export function getSocketUrl(): string {
-  return process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:4000";
+  return getSocketOptions().url;
+}
+
+export function getSocketOptions(): { url: string; path?: string } {
+  const { socket, useSocketPath } = getServiceBase();
+  return useSocketPath ? { url: socket, path: "/socket.io" } : { url: socket };
 }
 
 /** Resolve relative upload paths (e.g. /uploads/...) against the API origin. */

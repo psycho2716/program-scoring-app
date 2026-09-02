@@ -156,7 +156,7 @@ export default function JudgePage() {
   };
 
   const flushPendingSaves = async () => {
-    const pending = [...saveTimers.current.entries()];
+    const pending = Array.from(saveTimers.current.entries());
     for (const [, timer] of pending) clearTimeout(timer);
     saveTimers.current.clear();
 

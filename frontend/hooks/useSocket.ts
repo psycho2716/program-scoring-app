@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
-import { getSocketUrl } from "@/lib/api";
+import { getSocketOptions } from "@/lib/api";
 import {
   ScoreProgressPayload,
   ScoreSubmittedPayload,
@@ -31,7 +31,9 @@ export function useSocket({
   useEffect(() => {
     if (!enabled || !token) return;
 
-    const socket = io(getSocketUrl(), {
+    const { url, path } = getSocketOptions();
+    const socket = io(url, {
+      ...(path ? { path } : {}),
       auth: { token },
       transports: ["websocket", "polling"],
     });

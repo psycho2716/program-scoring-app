@@ -82,23 +82,34 @@ npm run dev
 
 ## LAN Access (Judge Tablets)
 
-1. Find your PC's LAN IP: `ipconfig` → e.g. `192.168.1.100`
-2. Update `frontend/.env.local`:
-   ```env
-   NEXT_PUBLIC_API_URL=http://192.168.1.100:4000
-   NEXT_PUBLIC_SOCKET_URL=http://192.168.1.100:4000
-   ```
-3. Update `backend/.env`:
-   ```env
-   FRONTEND_URL=http://192.168.1.100:3000
-   ```
-4. Start Next.js bound to all interfaces:
+Judges on the same Wi-Fi can open the app at `http://<your-pc-lan-ip>:3000` (e.g. `http://10.0.0.39:3000`). Use the **Wi-Fi / Ethernet** address from `ipconfig`, not Tailscale or VPN IPs unless the tablet uses the same VPN.
+
+### Quick setup
+
+1. **Start the app** from the project root:
    ```bash
-   cd frontend
-   npx next dev -H 0.0.0.0 -p 3000
+   npm run dev
    ```
-5. Allow **ports 3000 and 4000** through Windows Firewall (Private network)
-6. Judges open: `http://192.168.1.100:3000`
+   This prints LAN URLs when the frontend starts.
+
+2. **Allow Windows Firewall** (required once, run PowerShell **as Administrator**):
+   ```powershell
+   .\scripts\open-lan-firewall.ps1
+   ```
+   Only port **3000** is required for judges when using the built-in API proxy. Port 4000 is opened for direct API access during debugging.
+
+3. **On each judge tablet**, open the printed URL (same network as the host PC).
+
+No manual `NEXT_PUBLIC_API_URL` changes are needed for LAN: the frontend proxies `/api`, `/uploads`, and `/socket.io` through port 3000 when opened via a LAN IP.
+
+### Optional: direct backend URL
+
+If you prefer tablets to call the API on port 4000 directly, set in `frontend/.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://192.168.1.100:4000
+NEXT_PUBLIC_SOCKET_URL=http://192.168.1.100:4000
+```
+And ensure port 4000 is allowed through the firewall.
 
 ## Scoring Categories
 
@@ -136,14 +147,15 @@ npm run dev
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start backend + frontend |
+| `npm run dev` | Start backend + frontend (prints LAN URLs) |
 | `npm run dev:backend` | Express API only |
 | `npm run dev:frontend` | Next.js UI only |
+| `npm run lan:firewall` | Show firewall setup command (run script as Admin) |
 | `npm run build` | Production build |
 
 ## Troubleshooting
 
 - **Database connection failed**: Ensure WAMP MySQL is running and credentials in `backend/.env` match
-- **Judges can't connect on LAN**: Check firewall, IP in env vars, and `HOST=0.0.0.0` on backend
+- **Judges can't connect on LAN**: Run `scripts/open-lan-firewall.ps1` as Admin; use Wi-Fi IP from `ipconfig` (e.g. `10.0.0.x`), not VPN/Tailscale; ensure `npm run dev` is running on the host
 - **Socket not updating**: Confirm `NEXT_PUBLIC_SOCKET_URL` uses LAN IP, not `localhost`, on judge devices
 - **Login fails**: Re-import `schema.sql` to reset seed accounts
