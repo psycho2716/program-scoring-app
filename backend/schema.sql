@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(50) NOT NULL UNIQUE,
+  display_name VARCHAR(120) NULL,
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('judge', 'admin') NOT NULL,
   judge_number TINYINT NULL,
@@ -21,12 +22,14 @@ CREATE TABLE users (
 
 CREATE TABLE candidates (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  candidate_number TINYINT NOT NULL UNIQUE,
+  candidate_number TINYINT NOT NULL,
+  gender ENUM('male', 'female') NOT NULL,
   name VARCHAR(100) NOT NULL,
   department VARCHAR(100) NOT NULL,
   talent_details VARCHAR(200) NULL,
   photo_url VARCHAR(500) NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_candidate_gender_number (gender, candidate_number)
 );
 
 CREATE TABLE categories (
@@ -89,25 +92,25 @@ CREATE TABLE event_settings (
 -- Default password for all accounts: password123
 SET @pwd = '$2b$10$txbkEh4X4b4S9BdMf2VQpu1N4gHLVSyZ.czWy8Y2/RMGhywKgvkDu';
 
-INSERT INTO users (username, password_hash, role, judge_number) VALUES
-  ('judge1', @pwd, 'judge', 1),
-  ('judge2', @pwd, 'judge', 2),
-  ('judge3', @pwd, 'judge', 3),
-  ('judge4', @pwd, 'judge', 4),
-  ('judge5', @pwd, 'judge', 5),
-  ('judge6', @pwd, 'judge', 6),
-  ('judge7', @pwd, 'judge', 7),
-  ('admin', @pwd, 'admin', NULL);
+INSERT INTO users (username, display_name, password_hash, role, judge_number) VALUES
+  ('judge1', 'Ms. Shella Mae Tabuna', @pwd, 'judge', 1),
+  ('judge2', 'Mr. Ralph Lester Gadon', @pwd, 'judge', 2),
+  ('judge3', 'Mr. Mark Lambert Fornea', @pwd, 'judge', 3),
+  ('judge4', 'Mr. Marcus Maylas', @pwd, 'judge', 4),
+  ('judge5', 'Mr. John Vyktor Regala', @pwd, 'judge', 5),
+  ('judge6', 'Mr. Justin Tyron Martinez', @pwd, 'judge', 6),
+  ('judge7', 'Ms. Danielle Jane Magallon', @pwd, 'judge', 7),
+  ('admin', NULL, @pwd, 'admin', NULL);
 
-INSERT INTO candidates (candidate_number, name, department) VALUES
-  (1, 'Maria Santos', 'College of Engineering'),
-  (2, 'Juan Dela Cruz', 'College of Education'),
-  (3, 'Ana Reyes', 'College of Nursing'),
-  (4, 'Carlos Mendoza', 'College of Business'),
-  (5, 'Sofia Garcia', 'College of Arts and Sciences'),
-  (6, 'Miguel Torres', 'College of Agriculture'),
-  (7, 'Isabella Cruz', 'College of Information Technology'),
-  (8, 'Diego Ramos', 'College of Criminal Justice');
+INSERT INTO candidates (candidate_number, gender, name, department) VALUES
+  (1, 'female', 'Akisha Daquiado', 'Bachelor of Secondary Education'),
+  (2, 'female', 'Angelie Briones Maestre', 'Bachelor of Secondary Education'),
+  (3, 'female', 'Psalms Fabellon', 'Bachelor of Science in Business Administration'),
+  (1, 'male', 'James Andrei Mindoro', 'Bachelor of Elementary Education'),
+  (2, 'male', 'Mike Fabellon', 'Bachelor of Science in Information Technology'),
+  (3, 'male', 'Axl Maverick Aguado', 'Bachelor of Science in Information Technology'),
+  (4, 'male', 'Karl Palis', 'Bachelor of Science in Business Administration'),
+  (5, 'male', 'Jaz M. Magdato', 'Bachelor of Elementary Education');
 
 INSERT INTO categories (category_name, weight, max_score, display_order) VALUES
   ('Production Number', 10.00, 10, 1),

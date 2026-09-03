@@ -29,7 +29,7 @@ export function LiveControlDashboard({ token }: LiveControlDashboardProps) {
   const {
     rows,
     categories: tabCategories,
-    winner,
+    winners,
     error: tabError,
     isRefreshing,
     isExporting,
@@ -107,10 +107,25 @@ export function LiveControlDashboard({ token }: LiveControlDashboardProps) {
     },
   });
 
-  const candidateNumbers = useMemo(
-    () => Array.from(new Set(matrix.map((m) => m.candidateNumber))).sort((a, b) => a - b),
-    [matrix]
-  );
+  const matrixCandidates = useMemo(() => {
+    const byId = new Map<
+      number,
+      { candidateId: number; candidateNumber: number; gender: MatrixCell["gender"] }
+    >();
+    for (const cell of matrix) {
+      if (!byId.has(cell.candidateId)) {
+        byId.set(cell.candidateId, {
+          candidateId: cell.candidateId,
+          candidateNumber: cell.candidateNumber,
+          gender: cell.gender,
+        });
+      }
+    }
+    return Array.from(byId.values()).sort((a, b) => {
+      if (a.gender !== b.gender) return a.gender === "female" ? -1 : 1;
+      return a.candidateNumber - b.candidateNumber;
+    });
+  }, [matrix]);
 
   const judgeNumbers = useMemo(
     () => Array.from(new Set(matrix.map((m) => m.judgeNumber))).sort((a, b) => a - b),
@@ -162,18 +177,6 @@ export function LiveControlDashboard({ token }: LiveControlDashboardProps) {
         selectedCategoryId={selectedCategoryId}
         isUpdating={isUpdating}
         onSelectCategory={setSelectedCategoryId}
-        onBroadcast={() => {
-          if (!selectedCategoryId) return;
-          if (state?.isScoringOpen) {
-            // Re-notify judges for the locked live category only.
-            updateState({
-              activeCategoryId: state.activeCategoryId,
-              isScoringOpen: true,
-            });
-            return;
-          }
-          updateState({ activeCategoryId: selectedCategoryId, isScoringOpen: true });
-        }}
         onToggleScoring={() => {
           if (state?.isScoringOpen) {
             updateState({ isScoringOpen: false });
@@ -213,13 +216,13 @@ export function LiveControlDashboard({ token }: LiveControlDashboardProps) {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
         <SubmissionMatrix
           matrix={matrix}
-          candidateNumbers={candidateNumbers}
+          candidates={matrixCandidates}
           judgeNumbers={judgeNumbers}
         />
         <LeaderboardPanel
           rows={rows}
           categories={displayCategories}
-          winner={winner}
+          winners={winners}
           onRefresh={refresh}
           onExport={exportExcel}
           isRefreshing={isRefreshing}

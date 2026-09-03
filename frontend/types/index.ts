@@ -1,4 +1,5 @@
 export type UserRole = "judge" | "admin";
+export type CandidateGender = "male" | "female";
 export type ScoringFormula = "percentage_weighted" | "raw_average_weighted";
 
 export interface EventSettings {
@@ -12,6 +13,7 @@ export interface EventSettings {
 export interface Candidate {
   id: number;
   candidateNumber: number;
+  gender: CandidateGender;
   name: string;
   department: string;
   /** Performance / talent blurb shown on the judge hero card. */
@@ -22,12 +24,14 @@ export interface Candidate {
 export interface JudgeAccount {
   id: number;
   username: string;
+  displayName: string | null;
   judgeNumber: number;
 }
 
 export interface AuthUser {
   id: number;
   username: string;
+  displayName: string | null;
   role: UserRole;
   judgeNumber: number | null;
 }
@@ -55,6 +59,7 @@ export interface SystemState {
 export interface ScoreEntry {
   candidateId: number;
   candidateNumber: number;
+  gender: CandidateGender;
   name: string;
   department: string;
   talentDetails: string | null;
@@ -69,6 +74,7 @@ export interface ScoreEntry {
 export interface TabulationRow {
   candidateId: number;
   candidateNumber: number;
+  gender: CandidateGender;
   name: string;
   department: string;
   categoryScores: Record<number, number>;
@@ -81,6 +87,7 @@ export interface MatrixCell {
   judgeNumber: number;
   candidateId: number;
   candidateNumber: number;
+  gender: CandidateGender;
   categoryId: number;
   status: "not_started" | "in_progress" | "submitted";
   rawScore: number | null;
@@ -89,10 +96,16 @@ export interface MatrixCell {
 export interface WinnerInfo {
   candidateId: number;
   candidateNumber: number;
+  gender: CandidateGender;
   name: string;
   department: string;
   finalScore: number;
   isComplete: boolean;
+}
+
+export interface DualWinners {
+  male: WinnerInfo | null;
+  female: WinnerInfo | null;
 }
 
 export interface StateUpdatePayload {

@@ -9,6 +9,7 @@ import { AuthUser } from "../types";
 interface UserRow extends RowDataPacket {
   id: number;
   username: string;
+  display_name: string | null;
   password_hash: string;
   role: "judge" | "admin";
   judge_number: number | null;
@@ -26,7 +27,7 @@ router.post("/login", async (req: Request, res: Response) => {
     }
 
     const [rows] = await pool.query<UserRow[]>(
-      "SELECT id, username, password_hash, role, judge_number FROM users WHERE username = :username",
+      "SELECT id, username, display_name, password_hash, role, judge_number FROM users WHERE username = :username",
       { username }
     );
 
@@ -45,6 +46,7 @@ router.post("/login", async (req: Request, res: Response) => {
     const authUser: AuthUser = {
       id: user.id,
       username: user.username,
+      displayName: user.display_name,
       role: user.role,
       judgeNumber: user.judge_number,
     };

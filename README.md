@@ -67,9 +67,10 @@ backend/schema.sql
 ```
 
 This creates all tables and seed data:
-- Judges: `judge1` … `judge7`
+- Judges: `judge1` … `judge7` (display names prefilled for the Katimugan panel)
 - Tabulator: `admin`
 - Default password for all accounts: **`password123`**
+- Admin can change judge passwords anytime under **Overview → Judge Accounts**
 
 ### 4. Run locally
 
@@ -94,9 +95,9 @@ Judges on the same Wi-Fi can open the app at `http://<your-pc-lan-ip>:3000` (e.g
 
 2. **Allow Windows Firewall** (required once, run PowerShell **as Administrator**):
    ```powershell
-   .\scripts\open-lan-firewall.ps1
+   npm run lan:firewall
    ```
-   Only port **3000** is required for judges when using the built-in API proxy. Port 4000 is opened for direct API access during debugging.
+   This creates/updates inbound allow rules for ports **3000** and **4000** on Domain, Private, and Public profiles. Only port **3000** is required for judges when using the built-in API proxy; 4000 is for direct API access during debugging.
 
 3. **On each judge tablet**, open the printed URL (same network as the host PC).
 
@@ -150,7 +151,7 @@ And ensure port 4000 is allowed through the firewall.
 | `npm run dev` | Start backend + frontend (prints LAN URLs) |
 | `npm run dev:backend` | Express API only |
 | `npm run dev:frontend` | Next.js UI only |
-| `npm run lan:firewall` | Show firewall setup command (run script as Admin) |
+| `npm run lan:firewall` | Open Windows Firewall ports 3000/4000 (run as Admin) |
 | `npm run build` | Production build |
 
 ## Troubleshooting

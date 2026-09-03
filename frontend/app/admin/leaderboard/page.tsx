@@ -7,7 +7,7 @@ import { useAuth } from "@/providers/auth-context";
 
 export default function AdminLeaderboardPage() {
   const { token } = useAuth();
-  const { rows, categories, winner, error, isRefreshing, isExporting, refresh, exportExcel } =
+  const { rows, categories, winners, error, isRefreshing, isExporting, refresh, exportExcel } =
     useTabulation(token, { canRecalculate: true });
 
   return (
@@ -15,7 +15,7 @@ export default function AdminLeaderboardPage() {
       <div>
         <h2 className="text-2xl font-semibold text-white">Leaderboard</h2>
         <p className="text-sm text-muted-foreground">
-          Live ranked standings and full category breakdown.
+          Separate Mr. and Miss standings with full category breakdown.
         </p>
       </div>
 
@@ -28,7 +28,7 @@ export default function AdminLeaderboardPage() {
       <LeaderboardPanel
         rows={rows}
         categories={categories}
-        winner={winner}
+        winners={winners}
         onRefresh={refresh}
         onExport={exportExcel}
         isRefreshing={isRefreshing}

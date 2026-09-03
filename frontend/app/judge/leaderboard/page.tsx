@@ -7,7 +7,7 @@ import { useAuth } from "@/providers/auth-context";
 
 export default function JudgeLeaderboardPage() {
   const { token } = useAuth();
-  const { rows, categories, winner, error, isRefreshing, refresh } = useTabulation(token, {
+  const { rows, categories, winners, error, isRefreshing, refresh } = useTabulation(token, {
     canRecalculate: false,
   });
 
@@ -15,7 +15,9 @@ export default function JudgeLeaderboardPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-semibold text-white">Leaderboard</h2>
-        <p className="text-sm text-muted-foreground">Live ranked standings for the pageant.</p>
+        <p className="text-sm text-muted-foreground">
+          Separate Mr. and Miss standings for the pageant.
+        </p>
       </div>
 
       {error && (
@@ -27,7 +29,7 @@ export default function JudgeLeaderboardPage() {
       <LeaderboardPanel
         rows={rows}
         categories={categories}
-        winner={winner}
+        winners={winners}
         onRefresh={refresh}
         isRefreshing={isRefreshing}
         showExport={false}

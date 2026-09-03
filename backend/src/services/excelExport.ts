@@ -22,12 +22,18 @@ export async function buildResultsWorkbook(): Promise<ExcelJS.Workbook> {
   const candidatesSheet = workbook.addWorksheet("Candidates");
   candidatesSheet.columns = [
     { header: "#", key: "num", width: 8 },
+    { header: "Division", key: "division", width: 10 },
     { header: "Name", key: "name", width: 30 },
     { header: "Department", key: "department", width: 35 },
   ];
   candidatesSheet.getRow(1).font = { bold: true };
   candidates.forEach((c) => {
-    candidatesSheet.addRow({ num: c.candidateNumber, name: c.name, department: c.department });
+    candidatesSheet.addRow({
+      num: c.candidateNumber,
+      division: c.gender === "male" ? "Mr." : "Miss",
+      name: c.name,
+      department: c.department,
+    });
   });
 
   const rawSheet = workbook.addWorksheet("RawScores");
@@ -42,6 +48,7 @@ export async function buildResultsWorkbook(): Promise<ExcelJS.Workbook> {
 
     rawSheet.getRow(currentRow).values = [
       "#",
+      "Division",
       "Name",
       "Judge 1",
       "Judge 2",
@@ -57,6 +64,7 @@ export async function buildResultsWorkbook(): Promise<ExcelJS.Workbook> {
     for (const row of block.rows) {
       rawSheet.getRow(currentRow).values = [
         row.candidateNumber,
+        row.gender === "male" ? "Mr." : "Miss",
         row.name,
         ...row.judgeScores.map((s) => s ?? ""),
       ];
@@ -73,6 +81,7 @@ export async function buildResultsWorkbook(): Promise<ExcelJS.Workbook> {
 
   tabSheet.getRow(2).values = [
     "#",
+    "Division",
     "Name",
     "Prod Num (10%)",
     "Advocacy (15%)",
@@ -86,9 +95,14 @@ export async function buildResultsWorkbook(): Promise<ExcelJS.Workbook> {
   tabSheet.getRow(2).font = { bold: true };
 
   const categoryOrder = rawScoreBlocks.map((b) => b.categoryId);
+  const divisionOrder = { female: 0, male: 1 } as const;
 
   tabulation
-    .sort((a, b) => a.rank - b.rank)
+    .sort((a, b) => {
+      const divisionDiff = divisionOrder[a.gender] - divisionOrder[b.gender];
+      if (divisionDiff !== 0) return divisionDiff;
+      return a.rank - b.rank;
+    })
     .forEach((row, index) => {
       const excelRow = tabSheet.getRow(index + 3);
       const categoryValues = categoryOrder.map((catId) =>
@@ -97,6 +111,7 @@ export async function buildResultsWorkbook(): Promise<ExcelJS.Workbook> {
 
       excelRow.values = [
         row.candidateNumber,
+        row.gender === "male" ? "Mr." : "Miss",
         row.name,
         ...categoryValues,
         Number(row.finalScore).toFixed(2),

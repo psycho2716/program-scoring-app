@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, Radio, Unlock } from "lucide-react";
+import { Lock, Unlock } from "lucide-react";
 import { Category, SystemState } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ interface CategoryControlProps {
   state: SystemState | null;
   selectedCategoryId: number | null;
   onSelectCategory: (id: number) => void;
-  onBroadcast: () => void;
   onToggleScoring: () => void;
   isUpdating?: boolean;
 }
@@ -28,7 +27,6 @@ export function CategoryControl({
   state,
   selectedCategoryId,
   onSelectCategory,
-  onBroadcast,
   onToggleScoring,
   isUpdating = false,
 }: CategoryControlProps) {
@@ -80,16 +78,6 @@ export function CategoryControl({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!selectedCategoryId || isUpdating}
-            onClick={onBroadcast}
-            className="border-rsu-teal/30 bg-rsu-teal/10 text-rsu-teal hover:bg-rsu-teal/20"
-          >
-            <Radio className="h-4 w-4" />
-            Broadcast to Judges
-          </Button>
           <Button
             type="button"
             variant={isOpen ? "destructive" : "success"}

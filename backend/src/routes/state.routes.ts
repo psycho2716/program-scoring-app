@@ -11,6 +11,16 @@ export function setStateBroadcaster(fn: (payload: StateUpdatePayload) => void): 
   broadcastStateUpdate = fn;
 }
 
+/** Push the current system state to all connected clients (admin + judges). */
+export async function emitCurrentState(): Promise<void> {
+  const state = await getSystemState();
+  broadcastStateUpdate?.({
+    activeCategoryId: state.activeCategoryId,
+    isScoringOpen: state.isScoringOpen,
+    categoryName: state.activeCategory?.categoryName ?? null,
+  });
+}
+
 router.get("/", authRequired, async (_req: Request, res: Response) => {
   try {
     const state = await getSystemState();

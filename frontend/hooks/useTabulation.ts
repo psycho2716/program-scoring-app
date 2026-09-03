@@ -6,9 +6,11 @@ import { useSocket } from "@/hooks/useSocket";
 import {
   ApiResponse,
   Category,
+  DualWinners,
   TabulationRow,
-  WinnerInfo,
 } from "@/types";
+
+const emptyWinners: DualWinners = { male: null, female: null };
 
 export function useTabulation(
   token: string | null,
@@ -17,7 +19,7 @@ export function useTabulation(
   const { enabled = true, canRecalculate = false } = options;
   const [rows, setRows] = useState<TabulationRow[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [winner, setWinner] = useState<WinnerInfo | null>(null);
+  const [winners, setWinners] = useState<DualWinners>(emptyWinners);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -31,12 +33,23 @@ export function useTabulation(
           {},
           token
         ),
-        apiFetch<ApiResponse<WinnerInfo | null>>("/api/tabulation/winner", {}, token),
+        apiFetch<ApiResponse<DualWinners>>("/api/tabulation/winner", {}, token),
       ]);
 
       if (tabResult.status === "fulfilled" && tabResult.value.success && tabResult.value.data) {
-        setRows(tabResult.value.data.rows);
-        setCategories(tabResult.value.data.categories);
+        const nextRows = (tabResult.value.data.rows ?? []).map((row) => ({
+          ...row,
+          finalScore: Number(row.finalScore) || 0,
+          rank: Number(row.rank) || 0,
+          categoryScores: Object.fromEntries(
+            Object.entries(row.categoryScores ?? {}).map(([key, value]) => [
+              Number(key),
+              Number(value) || 0,
+            ])
+          ),
+        }));
+        setRows(nextRows);
+        setCategories(tabResult.value.data.categories ?? []);
       } else if (tabResult.status === "rejected") {
         setError(
           tabResult.reason instanceof Error ? tabResult.reason.message : "Failed to load tabulation"
@@ -44,7 +57,15 @@ export function useTabulation(
       }
 
       if (winnerResult.status === "fulfilled" && winnerResult.value.success) {
-        setWinner(winnerResult.value.data ?? null);
+        const next = winnerResult.value.data ?? emptyWinners;
+        setWinners({
+          male: next.male
+            ? { ...next.male, finalScore: Number(next.male.finalScore) || 0 }
+            : null,
+          female: next.female
+            ? { ...next.female, finalScore: Number(next.female.finalScore) || 0 }
+            : null,
+        });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tabulation");
@@ -98,7 +119,7 @@ export function useTabulation(
   return {
     rows,
     categories,
-    winner,
+    winners,
     error,
     isRefreshing,
     isExporting,

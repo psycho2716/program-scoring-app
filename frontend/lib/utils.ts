@@ -1,8 +1,13 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { CandidateGender } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+export function divisionLabel(gender: CandidateGender): "Mr." | "Miss" {
+  return gender === "male" ? "Mr." : "Miss";
 }
 
 export function getAppName(): string {

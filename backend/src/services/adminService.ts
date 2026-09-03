@@ -2,22 +2,29 @@ import bcrypt from "bcrypt";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { pool } from "../db/pool";
 import { deleteUploadIfExists } from "../middleware/upload";
-import { Candidate, Category, JudgeAccount } from "../types";
+import { Candidate, CandidateGender, Category, JudgeAccount } from "../types";
 import { assertSetupAllowed, getEventSettings } from "./settingsService";
 import { recalculateTabulation } from "./tabulationService";
 
 interface CandidateRow extends RowDataPacket {
   id: number;
   candidate_number: number;
+  gender: CandidateGender;
   name: string;
   department: string;
   talent_details: string | null;
   photo_url: string | null;
 }
 
+function parseGender(value: unknown): CandidateGender {
+  if (value === "male" || value === "female") return value;
+  throw new Error("Gender must be male or female");
+}
+
 interface JudgeRow extends RowDataPacket {
   id: number;
   username: string;
+  display_name: string | null;
   judge_number: number;
 }
 
@@ -33,6 +40,7 @@ function mapCandidate(row: CandidateRow): Candidate {
   return {
     id: row.id,
     candidateNumber: row.candidate_number,
+    gender: row.gender,
     name: row.name,
     department: row.department,
     talentDetails: row.talent_details,
@@ -41,7 +49,7 @@ function mapCandidate(row: CandidateRow): Candidate {
 }
 
 const CANDIDATE_SELECT =
-  "SELECT id, candidate_number, name, department, talent_details, photo_url FROM candidates";
+  "SELECT id, candidate_number, gender, name, department, talent_details, photo_url FROM candidates";
 
 function mapCategory(row: CategoryRow): Category {
   return {
@@ -57,9 +65,12 @@ function mapJudge(row: JudgeRow): JudgeAccount {
   return {
     id: row.id,
     username: row.username,
+    displayName: row.display_name,
     judgeNumber: row.judge_number,
   };
 }
+
+const JUDGE_SELECT = "SELECT id, username, display_name, judge_number FROM users";
 
 export async function syncScoreGrid(): Promise<void> {
   await pool.query(
@@ -74,13 +85,14 @@ export async function syncScoreGrid(): Promise<void> {
 
 export async function listCandidates(): Promise<Candidate[]> {
   const [rows] = await pool.query<CandidateRow[]>(
-    `${CANDIDATE_SELECT} ORDER BY candidate_number`
+    `${CANDIDATE_SELECT} ORDER BY gender DESC, candidate_number`
   );
   return rows.map(mapCandidate);
 }
 
 export async function createCandidate(input: {
   candidateNumber: number;
+  gender: CandidateGender;
   name: string;
   department: string;
   talentDetails?: string | null;
@@ -88,19 +100,29 @@ export async function createCandidate(input: {
 }): Promise<Candidate> {
   await assertSetupAllowed();
 
+  const gender = parseGender(input.gender);
   const talentDetails = input.talentDetails?.trim() || null;
 
-  const [result] = await pool.query<ResultSetHeader>(
-    `INSERT INTO candidates (candidate_number, name, department, talent_details, photo_url)
-     VALUES (:candidateNumber, :name, :department, :talentDetails, :photoUrl)`,
-    {
-      candidateNumber: input.candidateNumber,
-      name: input.name.trim(),
-      department: input.department.trim(),
-      talentDetails,
-      photoUrl: input.photoUrl ?? null,
+  let result: ResultSetHeader;
+  try {
+    [result] = await pool.query<ResultSetHeader>(
+      `INSERT INTO candidates (candidate_number, gender, name, department, talent_details, photo_url)
+       VALUES (:candidateNumber, :gender, :name, :department, :talentDetails, :photoUrl)`,
+      {
+        candidateNumber: input.candidateNumber,
+        gender,
+        name: input.name.trim(),
+        department: input.department.trim(),
+        talentDetails,
+        photoUrl: input.photoUrl ?? null,
+      }
+    );
+  } catch (error) {
+    if ((error as { code?: string }).code === "ER_DUP_ENTRY") {
+      throw new Error("A candidate with this number already exists in this division");
     }
-  );
+    throw error;
+  }
 
   await syncScoreGrid();
   await recalculateTabulation();
@@ -116,6 +138,7 @@ export async function updateCandidate(
   id: number,
   input: Partial<{
     candidateNumber: number | string;
+    gender: CandidateGender;
     name: string;
     department: string;
     talentDetails: string | null;
@@ -124,11 +147,10 @@ export async function updateCandidate(
 ): Promise<Candidate> {
   await assertSetupAllowed();
 
-  const [rows] = await pool.query<CandidateRow[]>(
-    "SELECT id FROM candidates WHERE id = :id",
-    { id }
-  );
+  const [rows] = await pool.query<CandidateRow[]>(`${CANDIDATE_SELECT} WHERE id = :id`, { id });
   if (!rows[0]) throw new Error("Candidate not found");
+
+  const current = rows[0];
 
   let candidateNumber: number | null = null;
   if (input.candidateNumber !== undefined && input.candidateNumber !== null) {
@@ -138,30 +160,61 @@ export async function updateCandidate(
     }
   }
 
+  const gender =
+    input.gender === undefined ? null : parseGender(input.gender);
+
+  const nextGender = gender ?? current.gender;
+  const nextNumber = candidateNumber ?? current.candidate_number;
+
+  const [conflicts] = await pool.query<CandidateRow[]>(
+    `${CANDIDATE_SELECT}
+     WHERE gender = :gender AND candidate_number = :candidateNumber AND id <> :id
+     LIMIT 1`,
+    { gender: nextGender, candidateNumber: nextNumber, id }
+  );
+  if (conflicts[0]) {
+    const label = nextGender === "male" ? "Mr." : "Miss";
+    throw new Error(
+      `${label} #${nextNumber} is already used by ${conflicts[0].name}. Pick another number or division.`
+    );
+  }
+
   const talentDetails =
     input.talentDetails === undefined
       ? null
       : input.talentDetails?.trim() || null;
   const clearTalent = input.talentDetails !== undefined;
 
-  await pool.query(
-    `UPDATE candidates
-     SET candidate_number = COALESCE(:candidateNumber, candidate_number),
-         name = COALESCE(:name, name),
-         department = COALESCE(:department, department),
-         talent_details = CASE WHEN :clearTalent THEN :talentDetails ELSE talent_details END,
-         photo_url = COALESCE(:photoUrl, photo_url)
-     WHERE id = :id`,
-    {
-      id,
-      candidateNumber,
-      name: input.name?.trim() ?? null,
-      department: input.department?.trim() ?? null,
-      clearTalent: clearTalent ? 1 : 0,
-      talentDetails,
-      photoUrl: input.photoUrl ?? null,
+  try {
+    await pool.query(
+      `UPDATE candidates
+       SET candidate_number = COALESCE(:candidateNumber, candidate_number),
+           gender = COALESCE(:gender, gender),
+           name = COALESCE(:name, name),
+           department = COALESCE(:department, department),
+           talent_details = CASE WHEN :clearTalent THEN :talentDetails ELSE talent_details END,
+           photo_url = COALESCE(:photoUrl, photo_url)
+       WHERE id = :id`,
+      {
+        id,
+        candidateNumber,
+        gender,
+        name: input.name?.trim() ?? null,
+        department: input.department?.trim() ?? null,
+        clearTalent: clearTalent ? 1 : 0,
+        talentDetails,
+        photoUrl: input.photoUrl ?? null,
+      }
+    );
+  } catch (error) {
+    if ((error as { code?: string }).code === "ER_DUP_ENTRY") {
+      const label = nextGender === "male" ? "Mr." : "Miss";
+      throw new Error(
+        `${label} #${nextNumber} is already used. Pick another number or division.`
+      );
     }
-  );
+    throw error;
+  }
 
   await recalculateTabulation();
 
@@ -210,7 +263,7 @@ export async function setCandidatePhoto(id: number, photoUrl: string): Promise<C
 
 export async function listJudges(): Promise<JudgeAccount[]> {
   const [rows] = await pool.query<JudgeRow[]>(
-    "SELECT id, username, judge_number FROM users WHERE role = 'judge' ORDER BY judge_number"
+    `${JUDGE_SELECT} WHERE role = 'judge' ORDER BY judge_number`
   );
   return rows.map(mapJudge);
 }
@@ -218,6 +271,7 @@ export async function listJudges(): Promise<JudgeAccount[]> {
 export async function createJudge(input: {
   username: string;
   password: string;
+  displayName?: string | null;
   judgeNumber?: number;
 }): Promise<JudgeAccount> {
   await assertSetupAllowed();
@@ -231,12 +285,14 @@ export async function createJudge(input: {
   }
 
   const passwordHash = await bcrypt.hash(input.password, 10);
+  const displayName = input.displayName?.trim() || null;
 
   const [result] = await pool.query<ResultSetHeader>(
-    `INSERT INTO users (username, password_hash, role, judge_number)
-     VALUES (:username, :passwordHash, 'judge', :judgeNumber)`,
+    `INSERT INTO users (username, display_name, password_hash, role, judge_number)
+     VALUES (:username, :displayName, :passwordHash, 'judge', :judgeNumber)`,
     {
       username: input.username.trim(),
+      displayName,
       passwordHash,
       judgeNumber,
     }
@@ -244,34 +300,56 @@ export async function createJudge(input: {
 
   await syncScoreGrid();
 
-  const [rows] = await pool.query<JudgeRow[]>(
-    "SELECT id, username, judge_number FROM users WHERE id = :id",
-    { id: result.insertId }
-  );
+  const [rows] = await pool.query<JudgeRow[]>(`${JUDGE_SELECT} WHERE id = :id`, {
+    id: result.insertId,
+  });
 
   return mapJudge(rows[0]);
 }
 
 export async function updateJudge(
   id: number,
-  input: Partial<{ username: string; password: string; judgeNumber: number }>
+  input: Partial<{
+    username: string;
+    displayName: string | null;
+    password: string;
+    judgeNumber: number;
+  }>
 ): Promise<JudgeAccount> {
-  await assertSetupAllowed();
+  const changingProfile =
+    input.username !== undefined ||
+    input.displayName !== undefined ||
+    input.judgeNumber !== undefined;
 
-  const updates: string[] = [];
-  const params: Record<string, string | number> = { id };
-
-  if (input.username) {
-    updates.push("username = :username");
-    params.username = input.username.trim();
+  // Password can be changed anytime; profile fields require scoring closed.
+  if (changingProfile) {
+    await assertSetupAllowed();
   }
 
-  if (input.judgeNumber) {
+  const updates: string[] = [];
+  const params: Record<string, string | number | null> = { id };
+
+  if (input.username !== undefined) {
+    const username = input.username.trim();
+    if (!username) throw new Error("Username is required");
+    updates.push("username = :username");
+    params.username = username;
+  }
+
+  if (input.displayName !== undefined) {
+    updates.push("display_name = :displayName");
+    params.displayName = input.displayName?.trim() || null;
+  }
+
+  if (input.judgeNumber !== undefined) {
+    if (!Number.isInteger(input.judgeNumber) || input.judgeNumber < 1) {
+      throw new Error("Judge number must be a positive whole number");
+    }
     updates.push("judge_number = :judgeNumber");
     params.judgeNumber = input.judgeNumber;
   }
 
-  if (input.password) {
+  if (input.password !== undefined && input.password !== "") {
     updates.push("password_hash = :passwordHash");
     params.passwordHash = await bcrypt.hash(input.password, 10);
   }
@@ -286,7 +364,7 @@ export async function updateJudge(
   );
 
   const [rows] = await pool.query<JudgeRow[]>(
-    "SELECT id, username, judge_number FROM users WHERE id = :id AND role = 'judge'",
+    `${JUDGE_SELECT} WHERE id = :id AND role = 'judge'`,
     { id }
   );
 
@@ -446,4 +524,33 @@ export async function deleteCategory(id: number): Promise<Category[]> {
   await pool.query("DELETE FROM categories WHERE id = :id", { id });
   await recalculateTabulation();
   return listAdminCategories();
+}
+
+/** Clear all judge scores and tabulation results; keep candidates, judges, categories, settings. */
+export async function resetAllScores(): Promise<{ clearedScoreRows: number }> {
+  const connection = await pool.getConnection();
+  let clearedScoreRows = 0;
+  try {
+    await connection.beginTransaction();
+
+    const [scoreResult] = await connection.query<ResultSetHeader>(
+      `UPDATE scores
+       SET raw_score = NULL, is_submitted = 0
+       WHERE raw_score IS NOT NULL OR is_submitted = 1`
+    );
+    clearedScoreRows = Number(scoreResult.affectedRows ?? 0);
+
+    await connection.query("DELETE FROM candidate_results");
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+  await syncScoreGrid();
+  await recalculateTabulation();
+
+  return { clearedScoreRows };
 }

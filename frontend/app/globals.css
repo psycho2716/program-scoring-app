@@ -137,12 +137,16 @@
     @apply mx-auto flex h-8 w-8 items-center justify-center rounded-md border transition;
   }
 
+  .matrix-score-cell {
+    @apply mx-auto flex h-9 min-w-[2.5rem] items-center justify-center rounded-md border px-1.5 text-sm font-semibold tabular-nums transition;
+  }
+
   .matrix-cell-empty {
-    @apply border-white/15 bg-transparent;
+    @apply border-white/15 bg-transparent text-muted-foreground/60;
   }
 
   .matrix-cell-progress {
-    @apply border-amber-400/60 bg-amber-400/15;
+    @apply border-amber-400/60 bg-amber-400/15 text-amber-200;
   }
 
   .matrix-cell-done {

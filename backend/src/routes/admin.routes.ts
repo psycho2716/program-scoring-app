@@ -11,6 +11,7 @@ import {
   listCandidates,
   listJudges,
   replaceCategories,
+  resetAllScores,
   setCandidatePhoto,
   updateCandidate,
   updateCategory,
@@ -18,6 +19,7 @@ import {
 } from "../services/adminService";
 import { candidatePhotoUpload, toPublicUploadPath } from "../middleware/upload";
 import { getEventSettings, updateEventSettings } from "../services/settingsService";
+import { emitCurrentState } from "./state.routes";
 
 const router = Router();
 
@@ -196,6 +198,18 @@ router.delete("/categories/:id", authRequired, requireRole("admin"), async (req,
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete category";
     res.status(400).json({ success: false, error: message });
+  }
+});
+
+router.post("/reset-scores", authRequired, requireRole("admin"), async (_req, res) => {
+  try {
+    const data = await resetAllScores();
+    await emitCurrentState();
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error("Reset scores error:", error);
+    const message = error instanceof Error ? error.message : "Failed to reset scores";
+    res.status(500).json({ success: false, error: message });
   }
 });
 

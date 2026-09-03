@@ -54,7 +54,7 @@ export interface RoleGateProps {
 export interface LeaderboardPanelProps {
   rows: import("./index").TabulationRow[];
   categories: import("./index").Category[];
-  winner: import("./index").WinnerInfo | null;
+  winners: import("./index").DualWinners;
   onRefresh?: () => void;
   onExport?: () => void;
   isRefreshing?: boolean;
@@ -100,6 +100,7 @@ export interface CandidateHeroProps {
 
 export interface CandidateFormFields {
   candidateNumber: string;
+  gender: import("./index").CandidateGender;
   name: string;
   department: string;
   talentDetails: string;

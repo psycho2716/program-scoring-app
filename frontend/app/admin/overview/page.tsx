@@ -6,6 +6,7 @@ import { CategoriesManager } from "@/components/admin/setup/categories-manager";
 import { CandidatesManager } from "@/components/admin/setup/candidates-manager";
 import { EventSettingsForm } from "@/components/admin/setup/event-settings-form";
 import { JudgesManager } from "@/components/admin/setup/judges-manager";
+import { ResetScoresPanel } from "@/components/admin/setup/reset-scores-panel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
@@ -76,6 +77,7 @@ export default function AdminOverviewPage() {
 
       <CandidatesManager token={token} scoringLocked={scoringLocked} />
       <JudgesManager token={token} scoringLocked={scoringLocked} />
+      <ResetScoresPanel token={token} onMessage={setMessage} onReset={() => void loadState()} />
     </div>
   );
 }

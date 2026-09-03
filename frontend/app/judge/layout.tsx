@@ -78,7 +78,9 @@ export default function JudgeLayout({ children }: { children: ReactNode }) {
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-rsu-gold">
                   Judge {user?.judgeNumber}
                 </p>
-                <p className="text-xs font-medium text-white">{user?.username}</p>
+                <p className="max-w-[180px] truncate text-xs font-medium text-white">
+                  {user?.displayName || user?.username}
+                </p>
               </div>
             </div>
             <Button

@@ -3,14 +3,29 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ImagePlus, Save, Upload, X } from "lucide-react";
 import { apiFetch, uploadCandidatePhoto } from "@/lib/api";
-import type { ApiResponse, Candidate, CandidateFormFields, CandidatesManagerProps } from "@/types";
+import { divisionLabel } from "@/lib/utils";
+import type {
+  ApiResponse,
+  Candidate,
+  CandidateFormFields,
+  CandidateGender,
+  CandidatesManagerProps,
+} from "@/types";
 import { CandidatePhoto } from "@/components/brand/candidate-photo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const emptyForm: CandidateFormFields = {
   candidateNumber: "",
+  gender: "female",
   name: "",
   department: "",
   talentDetails: "",
@@ -19,6 +34,7 @@ const emptyForm: CandidateFormFields = {
 function draftFromCandidate(candidate: Candidate): CandidateFormFields {
   return {
     candidateNumber: String(candidate.candidateNumber),
+    gender: candidate.gender === "male" ? "male" : "female",
     name: candidate.name,
     department: candidate.department,
     talentDetails: candidate.talentDetails ?? "",
@@ -28,10 +44,46 @@ function draftFromCandidate(candidate: Candidate): CandidateFormFields {
 function isDraftDirty(candidate: Candidate, draft: CandidateFormFields): boolean {
   return (
     draft.candidateNumber.trim() !== String(candidate.candidateNumber) ||
+    draft.gender !== candidate.gender ||
     draft.name.trim() !== candidate.name ||
     draft.department.trim() !== candidate.department ||
     draft.talentDetails.trim() !== (candidate.talentDetails ?? "").trim()
   );
+}
+
+function draftConflictsWithRoster(
+  id: number,
+  draft: CandidateFormFields,
+  candidates: Candidate[]
+): boolean {
+  const n = Number(draft.candidateNumber);
+  if (!Number.isInteger(n) || n < 1) return false;
+  return candidates.some(
+    (other) =>
+      other.id !== id &&
+      other.gender === draft.gender &&
+      other.candidateNumber === n
+  );
+}
+
+/** Next free # in a division, ignoring one candidate (the row being edited). */
+function nextNumberForGender(
+  gender: CandidateGender,
+  excludeId: number | null,
+  candidates: Candidate[],
+  drafts: Record<number, CandidateFormFields>
+): number {
+  const used = new Set<number>();
+  for (const candidate of candidates) {
+    if (excludeId != null && candidate.id === excludeId) continue;
+    const draft = drafts[candidate.id];
+    const g = draft?.gender ?? candidate.gender;
+    const n = Number(draft?.candidateNumber ?? candidate.candidateNumber);
+    if (g === gender && Number.isInteger(n) && n > 0) used.add(n);
+  }
+  let next = 1;
+  while (used.has(next)) next += 1;
+  return next;
 }
 
 export function CandidatesManager({
@@ -58,12 +110,12 @@ export function CandidatesManager({
       setDrafts((prev) => {
         const next: Record<number, CandidateFormFields> = {};
         for (const candidate of res.data!) {
-          // Keep in-progress edits for the same candidate when possible
           const existing = prev[candidate.id];
-          next[candidate.id] =
-            existing && isDraftDirty(candidate, existing)
-              ? existing
-              : draftFromCandidate(candidate);
+          const keepDraft =
+            existing &&
+            isDraftDirty(candidate, existing) &&
+            !draftConflictsWithRoster(candidate.id, existing, res.data!);
+          next[candidate.id] = keepDraft ? existing : draftFromCandidate(candidate);
         }
         return next;
       });
@@ -96,10 +148,19 @@ export function CandidatesManager({
   };
 
   const updateDraft = (id: number, patch: Partial<CandidateFormFields>) => {
-    setDrafts((prev) => ({
-      ...prev,
-      [id]: { ...(prev[id] ?? emptyForm), ...patch },
-    }));
+    setDrafts((prev) => {
+      const current = prev[id] ?? emptyForm;
+      const next = { ...current, ...patch };
+
+      // Changing Miss/Mr keeps numbers unique by picking the next free # in that division.
+      if (patch.gender && patch.gender !== current.gender && patch.candidateNumber === undefined) {
+        next.candidateNumber = String(
+          nextNumberForGender(patch.gender, id, candidates, { ...prev, [id]: next })
+        );
+      }
+
+      return { ...prev, [id]: next };
+    });
   };
 
   const resetDraft = (candidate: Candidate) => {
@@ -118,6 +179,7 @@ export function CandidatesManager({
           method: "POST",
           body: JSON.stringify({
             candidateNumber: Number(form.candidateNumber),
+            gender: form.gender,
             name: form.name,
             department: form.department,
             talentDetails: form.talentDetails.trim() || null,
@@ -160,6 +222,22 @@ export function CandidatesManager({
       return;
     }
 
+    let gender = draft.gender;
+    let numberToSave = candidateNumber;
+    if (draftConflictsWithRoster(candidate.id, draft, candidates)) {
+      // Stale Miss/Mr drafts (or a taken number) should not block name/photo edits.
+      gender = candidate.gender === "male" ? "male" : "female";
+      numberToSave = candidate.candidateNumber;
+      setDrafts((prev) => ({
+        ...prev,
+        [candidate.id]: {
+          ...draft,
+          gender,
+          candidateNumber: String(numberToSave),
+        },
+      }));
+    }
+
     setSavingId(candidate.id);
     setMessage(null);
     try {
@@ -168,7 +246,8 @@ export function CandidatesManager({
         {
           method: "PUT",
           body: JSON.stringify({
-            candidateNumber,
+            candidateNumber: numberToSave,
+            gender,
             name: draft.name.trim(),
             department: draft.department.trim(),
             talentDetails: draft.talentDetails.trim() || null,
@@ -179,7 +258,9 @@ export function CandidatesManager({
       if (!res.success || !res.data) {
         throw new Error(res.error ?? "Failed to update candidate");
       }
-      setMessage(`Updated #${String(candidateNumber).padStart(2, "0")} ${draft.name.trim()}`);
+      setMessage(
+        `Updated ${divisionLabel(gender)} #${String(numberToSave).padStart(2, "0")} ${draft.name.trim()}`
+      );
       await load();
       onChange?.();
     } catch (err) {
@@ -225,7 +306,7 @@ export function CandidatesManager({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="mb-4 space-y-3">
-          <div className="grid gap-3 md:grid-cols-[auto_1fr_1fr_1fr_auto] md:items-end">
+          <div className="grid gap-3 md:grid-cols-[auto_5rem_7.5rem_1fr_1fr_auto] md:items-end">
             <div className="flex flex-col items-center gap-1">
               <button
                 type="button"
@@ -258,6 +339,27 @@ export function CandidatesManager({
               onChange={(e) => setForm({ ...form, candidateNumber: e.target.value })}
               required
             />
+            <Select
+              value={form.gender}
+              disabled={scoringLocked}
+              onValueChange={(value: CandidateGender) =>
+                setForm((prev) => ({
+                  ...prev,
+                  gender: value,
+                  candidateNumber: String(
+                    nextNumberForGender(value, null, candidates, drafts)
+                  ),
+                }))
+              }
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Division" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="female">Miss</SelectItem>
+                <SelectItem value="male">Mr.</SelectItem>
+              </SelectContent>
+            </Select>
             <Input
               placeholder="Name"
               value={form.name}
@@ -284,8 +386,9 @@ export function CandidatesManager({
             onChange={(e) => setForm({ ...form, talentDetails: e.target.value })}
           />
           <p className="text-xs text-muted-foreground">
-            Optional photo (JPEG, PNG, WebP, or GIF, max 5MB) and talent details for the judges
-            scoring screen. Edit any row below, then click Save.
+            Assign each candidate to Miss or Mr. Numbers are unique within a division (both can be
+            #1). Changing division auto-assigns the next free number. Optional photo and talent
+            details appear on the judges scoring screen.
           </p>
         </form>
 
@@ -311,7 +414,7 @@ export function CandidatesManager({
                       size="md"
                       className="mt-1 shrink-0 rounded-full"
                     />
-                    <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[4.5rem_1fr_1fr]">
+                    <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[4.5rem_7.5rem_1fr_1fr]">
                       <Input
                         aria-label={`Candidate ${candidate.id} number`}
                         value={draft.candidateNumber}
@@ -321,12 +424,27 @@ export function CandidatesManager({
                         }
                         className="h-9"
                       />
+                      <Select
+                        value={draft.gender}
+                        disabled={scoringLocked || busy}
+                        onValueChange={(value: CandidateGender) =>
+                          updateDraft(candidate.id, { gender: value })
+                        }
+                      >
+                        <SelectTrigger className="h-9" aria-label={`Candidate ${candidate.id} division`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="female">Miss</SelectItem>
+                          <SelectItem value="male">Mr.</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Input
                         aria-label={`Candidate ${candidate.id} name`}
                         value={draft.name}
                         disabled={scoringLocked || busy}
                         onChange={(e) => updateDraft(candidate.id, { name: e.target.value })}
-                        className="h-9 sm:col-span-1"
+                        className="h-9"
                       />
                       <Input
                         aria-label={`Candidate ${candidate.id} department`}
@@ -346,7 +464,7 @@ export function CandidatesManager({
                         onChange={(e) =>
                           updateDraft(candidate.id, { talentDetails: e.target.value })
                         }
-                        className="h-9 sm:col-span-3"
+                        className="h-9 sm:col-span-4"
                       />
                     </div>
                   </div>

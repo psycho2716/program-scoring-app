@@ -1,6 +1,6 @@
 import { RowDataPacket } from "mysql2";
 import { pool } from "../db/pool";
-import { ScoreEntry } from "../types";
+import { CandidateGender, ScoreEntry } from "../types";
 import { getEventSettings } from "./settingsService";
 import { getSystemState } from "./stateService";
 
@@ -18,6 +18,7 @@ async function ensureScoreGrid(): Promise<void> {
 interface ScoreRow extends RowDataPacket {
   candidate_id: number;
   candidate_number: number;
+  gender: CandidateGender;
   name: string;
   department: string;
   talent_details: string | null;
@@ -67,13 +68,13 @@ export async function getActiveScoresForJudge(judgeId: number): Promise<{
   }
 
   const [rows] = await pool.query<ScoreRow[]>(
-    `SELECT c.id AS candidate_id, c.candidate_number, c.name, c.department, c.talent_details,
+    `SELECT c.id AS candidate_id, c.candidate_number, c.gender, c.name, c.department, c.talent_details,
             c.photo_url, s.raw_score, s.is_submitted
      FROM candidates c
      LEFT JOIN scores s ON s.candidate_id = c.id
        AND s.judge_id = :judgeId
        AND s.category_id = :categoryId
-     ORDER BY c.candidate_number`,
+     ORDER BY c.gender DESC, c.candidate_number`,
     { judgeId, categoryId: state.activeCategoryId }
   );
 
@@ -115,6 +116,7 @@ export async function getActiveScoresForJudge(judgeId: number): Promise<{
       return {
         candidateId: row.candidate_id,
         candidateNumber: row.candidate_number,
+        gender: row.gender,
         name: row.name,
         department: row.department,
         talentDetails: row.talent_details,

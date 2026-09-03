@@ -31,6 +31,7 @@ export function signToken(user: AuthUser): string {
   const payload: AppJwtPayload = {
     sub: user.id,
     username: user.username,
+    displayName: user.displayName ?? null,
     role: user.role,
     judgeNumber: user.judgeNumber,
   };
@@ -44,6 +45,7 @@ export function verifyToken(token: string): AuthUser | null {
     return {
       id: decoded.sub,
       username: decoded.username,
+      displayName: decoded.displayName ?? null,
       role: decoded.role,
       judgeNumber: decoded.judgeNumber,
     };

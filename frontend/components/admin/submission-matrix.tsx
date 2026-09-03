@@ -1,24 +1,33 @@
 "use client";
 
-import { Check } from "lucide-react";
-import { MatrixCell } from "@/types";
-import { cn } from "@/lib/utils";
+import { CandidateGender, MatrixCell } from "@/types";
+import { cn, divisionLabel } from "@/lib/utils";
+
+export interface MatrixCandidateColumn {
+  candidateId: number;
+  candidateNumber: number;
+  gender: CandidateGender;
+}
 
 interface SubmissionMatrixProps {
   matrix: MatrixCell[];
-  candidateNumbers: number[];
+  candidates: MatrixCandidateColumn[];
   judgeNumbers: number[];
+}
+
+function formatScore(score: number | null | undefined): string {
+  if (score == null || !Number.isFinite(score)) return "—";
+  return Number.isInteger(score) ? String(score) : score.toFixed(1);
 }
 
 export function SubmissionMatrix({
   matrix,
-  candidateNumbers,
+  candidates,
   judgeNumbers,
 }: SubmissionMatrixProps) {
-  const getCell = (candidateNumber: number, judgeNumber: number) =>
+  const getCell = (candidateId: number, judgeNumber: number) =>
     matrix.find(
-      (cell) =>
-        cell.candidateNumber === candidateNumber && cell.judgeNumber === judgeNumber
+      (cell) => cell.candidateId === candidateId && cell.judgeNumber === judgeNumber
     );
 
   return (
@@ -27,19 +36,28 @@ export function SubmissionMatrix({
         <div>
           <h3 className="flex items-center gap-2 text-base font-semibold text-white">
             <span className="inline-block h-2 w-2 rounded-sm bg-rsu-gold" />
-            Live Submission Matrix
+            Judge Scores by Category
           </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Raw scores entered by each adjudicator for the selected category
+          </p>
         </div>
         <div className="flex flex-wrap gap-4 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <span className="matrix-cell matrix-cell-empty !h-3.5 !w-3.5" /> Not Started
+            <span className="matrix-score-cell matrix-cell-empty !h-5 !min-w-[1.75rem] !px-1 text-[10px]">
+              —
+            </span>{" "}
+            Not Started
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="matrix-cell matrix-cell-progress !h-3.5 !w-3.5" /> In Progress
+            <span className="matrix-score-cell matrix-cell-progress !h-5 !min-w-[1.75rem] !px-1 text-[10px]">
+              8
+            </span>{" "}
+            In Progress
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="matrix-cell matrix-cell-done !h-3.5 !w-3.5">
-              <Check className="h-2.5 w-2.5" />
+            <span className="matrix-score-cell matrix-cell-done !h-5 !min-w-[1.75rem] !px-1 text-[10px]">
+              9
             </span>{" "}
             Submitted
           </span>
@@ -51,9 +69,12 @@ export function SubmissionMatrix({
           <thead>
             <tr className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               <th className="px-3 py-2 text-left font-medium">Adjudicator</th>
-              {candidateNumbers.map((num) => (
-                <th key={num} className="px-2 py-2 text-center font-medium">
-                  C{num}
+              {candidates.map((candidate) => (
+                <th key={candidate.candidateId} className="px-2 py-2 text-center font-medium">
+                  <span className="block text-rsu-gold/80">
+                    {divisionLabel(candidate.gender)}
+                  </span>
+                  <span>C{candidate.candidateNumber}</span>
                 </th>
               ))}
             </tr>
@@ -64,26 +85,33 @@ export function SubmissionMatrix({
                 <td className="rounded-l-xl px-3 py-2.5 text-sm font-medium text-zinc-200">
                   Judge {judgeNumber}
                 </td>
-                {candidateNumbers.map((candidateNumber) => {
-                  const cell = getCell(candidateNumber, judgeNumber);
+                {candidates.map((candidate) => {
+                  const cell = getCell(candidate.candidateId, judgeNumber);
                   const status = cell?.status ?? "not_started";
+                  const score = cell?.rawScore ?? null;
+                  const label = formatScore(score);
+                  const shortLabel = `${divisionLabel(candidate.gender)} C${candidate.candidateNumber}`;
 
                   return (
-                    <td key={candidateNumber} className="px-2 py-2.5 text-center last:rounded-r-xl">
+                    <td
+                      key={candidate.candidateId}
+                      className="px-2 py-2.5 text-center last:rounded-r-xl"
+                    >
                       <span
                         title={
-                          cell?.rawScore != null
-                            ? `Score: ${cell.rawScore} (${status})`
-                            : status.replace("_", " ")
+                          score != null
+                            ? `Judge ${judgeNumber} → ${shortLabel}: ${label} (${status.replace("_", " ")})`
+                            : `Judge ${judgeNumber} → ${shortLabel}: ${status.replace("_", " ")}`
                         }
                         className={cn(
-                          "matrix-cell",
+                          "matrix-score-cell",
                           status === "submitted" && "matrix-cell-done",
                           status === "in_progress" && "matrix-cell-progress",
-                          status === "not_started" && "matrix-cell-empty"
+                          status === "not_started" && "matrix-cell-empty",
+                          score == null && status !== "not_started" && "text-muted-foreground/70"
                         )}
                       >
-                        {status === "submitted" && <Check className="h-4 w-4" strokeWidth={2.5} />}
+                        {label}
                       </span>
                     </td>
                   );
@@ -93,7 +121,7 @@ export function SubmissionMatrix({
             {judgeNumbers.length === 0 && (
               <tr>
                 <td
-                  colSpan={Math.max(candidateNumbers.length + 1, 2)}
+                  colSpan={Math.max(candidates.length + 1, 2)}
                   className="px-3 py-8 text-center text-sm text-muted-foreground"
                 >
                   No submission data for this category yet.
