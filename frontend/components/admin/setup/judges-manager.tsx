@@ -60,8 +60,15 @@ export function JudgesManager({ token, scoringLocked = false, onChange }: Judges
         const next: Record<number, JudgeDraft> = {};
         for (const judge of res.data!) {
           const existing = prev[judge.id];
+          // Never keep a typed password across reload — it is not server state, and
+          // keeping it leaves Save visible after a successful password update.
+          const preserved = existing
+            ? { ...existing, password: "" }
+            : null;
           next[judge.id] =
-            existing && isDraftDirty(judge, existing) ? existing : draftFromJudge(judge);
+            preserved && isDraftDirty(judge, preserved)
+              ? preserved
+              : draftFromJudge(judge);
         }
         return next;
       });
@@ -167,6 +174,14 @@ export function JudgesManager({ token, scoringLocked = false, onChange }: Judges
           ? `Updated Judge ${judgeNumber} and password`
           : `Updated Judge ${judgeNumber}`
       );
+      // Clear this row immediately so Save disappears even before load finishes.
+      const saved = res.data ?? {
+        ...judge,
+        username: draft.username.trim(),
+        displayName: draft.displayName.trim() || null,
+        judgeNumber,
+      };
+      setDrafts((prev) => ({ ...prev, [judge.id]: draftFromJudge(saved) }));
       await load();
       onChange?.();
     } catch (err) {
