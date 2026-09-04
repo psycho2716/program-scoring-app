@@ -103,6 +103,40 @@ Judges on the same Wi-Fi can open the app at `http://<your-pc-lan-ip>:3000` (e.g
 
 No manual `NEXT_PUBLIC_API_URL` changes are needed for LAN: the frontend proxies `/api`, `/uploads`, and `/socket.io` through port 3000 when opened via a LAN IP.
 
+### Start with Windows
+
+Install once (no Administrator needed):
+
+```powershell
+npm run autostart:install
+```
+
+After that, logging into Windows waits for WAMP MySQL, then opens a **RSU Pageant Scoring** window with `npm run dev`. Start immediately with `npm run servers:start`. Remove with `npm run autostart:uninstall`.
+
+WAMP itself should still be set to start with Windows (WAMP tray → **Start WAMP when Windows starts**), or start it before the scoring window.
+
+### Local domain `pageant-system.local`
+
+On the scoring PC, in **Administrator** PowerShell:
+
+```powershell
+npm run lan:vhost
+```
+
+That creates a WAMP Apache virtual host on port 80 that reverse-proxies to Next.js (`localhost:3000`), adds `127.0.0.1 pageant-system.local` to the hosts file, and allows TCP 80 through the firewall.
+
+Then, with servers running, open **http://pageant-system.local** on this PC.
+
+**Other Windows laptops** on the same Wi-Fi need a hosts line pointing at this PC (Administrator, once):
+
+```powershell
+.\scripts\add-pageant-hosts.ps1 -ServerIp 192.168.0.159
+```
+
+Use the current Wi-Fi IPv4 from `ipconfig` (it can change).
+
+**Tablets / phones** usually cannot edit `hosts`. Keep using `http://<wifi-ip>:3000`.
+
 ### Optional: direct backend URL
 
 If you prefer tablets to call the API on port 4000 directly, set in `frontend/.env.local`:
@@ -152,6 +186,10 @@ And ensure port 4000 is allowed through the firewall.
 | `npm run dev:backend` | Express API only |
 | `npm run dev:frontend` | Next.js UI only |
 | `npm run lan:firewall` | Open Windows Firewall ports 3000/4000 (run as Admin) |
+| `npm run lan:vhost` | WAMP Apache vhost `pageant-system.local` → Next.js (run as Admin) |
+| `npm run servers:start` | Wait for MySQL, then start frontend + backend |
+| `npm run autostart:install` | Start servers automatically when this Windows user logs in |
+| `npm run autostart:uninstall` | Remove the logon autostart shortcut |
 | `npm run build` | Production build |
 
 ## Troubleshooting

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { authRequired, requireRole } from "../middleware/auth";
-import { getAllCategories, getSystemState, updateSystemState } from "../services/stateService";
+import { getAllCategories, getSystemState, setResultsRevealed, updateSystemState } from "../services/stateService";
 import { StateUpdatePayload } from "../types";
 
 const router = Router();
@@ -17,6 +17,7 @@ export async function emitCurrentState(): Promise<void> {
   broadcastStateUpdate?.({
     activeCategoryId: state.activeCategoryId,
     isScoringOpen: state.isScoringOpen,
+    resultsRevealed: state.resultsRevealed,
     categoryName: state.activeCategory?.categoryName ?? null,
   });
 }
@@ -78,6 +79,7 @@ router.put("/", authRequired, requireRole("admin"), async (req: Request, res: Re
     const payload: StateUpdatePayload = {
       activeCategoryId: state.activeCategoryId,
       isScoringOpen: state.isScoringOpen,
+      resultsRevealed: state.resultsRevealed,
       categoryName: state.activeCategory?.categoryName ?? null,
     };
 
@@ -89,5 +91,22 @@ router.put("/", authRequired, requireRole("admin"), async (req: Request, res: Re
     res.status(500).json({ success: false, error: "Failed to update system state" });
   }
 });
+
+router.put(
+  "/results-reveal",
+  authRequired,
+  requireRole("admin"),
+  async (req: Request, res: Response) => {
+    try {
+      const revealed = Boolean((req.body as { revealed?: boolean }).revealed);
+      const state = await setResultsRevealed(revealed);
+      await emitCurrentState();
+      res.json({ success: true, data: state });
+    } catch (error) {
+      console.error("Results reveal error:", error);
+      res.status(500).json({ success: false, error: "Failed to update results reveal" });
+    }
+  }
+);
 
 export default router;

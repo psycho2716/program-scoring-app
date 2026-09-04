@@ -9,6 +9,7 @@ export interface AppSocketServer {
   broadcastStateUpdate: (payload: {
     activeCategoryId: number | null;
     isScoringOpen: boolean;
+    resultsRevealed: boolean;
     categoryName: string | null;
   }) => void;
   broadcastScoreProgress: (payload: {

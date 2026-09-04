@@ -86,6 +86,7 @@ export default function JudgePage() {
       setState((prev) => ({
         activeCategoryId: payload.activeCategoryId,
         isScoringOpen: payload.isScoringOpen,
+        resultsRevealed: payload.resultsRevealed ?? prev?.resultsRevealed ?? false,
         activeCategory: payload.categoryName
           ? {
               id: payload.activeCategoryId ?? 0,

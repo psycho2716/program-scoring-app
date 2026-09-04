@@ -17,8 +17,14 @@ interface ServiceBase {
 
 /** Resolve API/socket base URLs for localhost vs LAN (no manual env on judge tablets). */
 function getServiceBase(): ServiceBase {
+  const localFallback = "http://localhost:4000";
+
   if (typeof window === "undefined") {
-    const fallback = configuredApiUrl ?? "http://localhost:4000";
+    const fallback =
+      configuredApiUrl &&
+      (configuredApiUrl.includes("localhost") || configuredApiUrl.includes("127.0.0.1"))
+        ? configuredApiUrl
+        : localFallback;
     return {
       api: stripTrailingSlash(fallback),
       socket: stripTrailingSlash(configuredSocketUrl ?? fallback),
@@ -28,27 +34,15 @@ function getServiceBase(): ServiceBase {
 
   const { origin, hostname } = window.location;
 
-  if (
-    configuredApiUrl &&
-    !configuredApiUrl.includes("localhost") &&
-    !configuredApiUrl.includes("127.0.0.1")
-  ) {
-    return {
-      api: stripTrailingSlash(configuredApiUrl),
-      socket: stripTrailingSlash(configuredSocketUrl ?? configuredApiUrl),
-      useSocketPath: false,
-    };
-  }
-
-  // Opened via LAN IP: proxy /api, /uploads, and /socket.io through Next (port 3000).
+  // Tablets / projector on a LAN hostname: always same-origin. Next proxies /api.
+  // Never pin a Wi-Fi IP here — it goes stale and login shows "Failed to fetch".
   if (!isLocalhostHostname(hostname)) {
     return { api: origin, socket: origin, useSocketPath: true };
   }
 
-  const local = configuredApiUrl ?? "http://localhost:4000";
   return {
-    api: stripTrailingSlash(local),
-    socket: stripTrailingSlash(configuredSocketUrl ?? local),
+    api: stripTrailingSlash(localFallback),
+    socket: stripTrailingSlash(localFallback),
     useSocketPath: false,
   };
 }

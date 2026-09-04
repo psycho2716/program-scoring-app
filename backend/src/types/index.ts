@@ -57,6 +57,8 @@ export interface Category {
 export interface SystemState {
   activeCategoryId: number | null;
   isScoringOpen: boolean;
+  /** When true, the public /results projector page shows crown placements. */
+  resultsRevealed: boolean;
   activeCategory: Category | null;
 }
 
@@ -112,9 +114,31 @@ export interface DualWinners {
   female: WinnerInfo | null;
 }
 
+export interface CrownPlacement {
+  candidateId: number;
+  candidateNumber: number;
+  gender: CandidateGender;
+  name: string;
+  department: string;
+  photoUrl: string | null;
+  finalScore: number;
+  rank: number;
+  honorific: string;
+  title: string;
+}
+
+export interface CrownResultsDisplay {
+  revealed: boolean;
+  pageantName: string;
+  year: number;
+  female: CrownPlacement[];
+  male: CrownPlacement[];
+}
+
 export interface StateUpdatePayload {
   activeCategoryId: number | null;
   isScoringOpen: boolean;
+  resultsRevealed: boolean;
   categoryName: string | null;
 }
 

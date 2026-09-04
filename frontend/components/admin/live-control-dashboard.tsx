@@ -190,6 +190,51 @@ export function LiveControlDashboard({ token }: LiveControlDashboardProps) {
         }}
       />
 
+      <div className="gold-border-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rsu-gold">
+            Audience results
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Projector page shows a holding screen until you reveal the Top 4.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={state?.resultsRevealed ? "secondary" : "teal"}
+            disabled={isUpdating}
+            onClick={() => {
+              void (async () => {
+                if (!token) return;
+                setIsUpdating(true);
+                try {
+                  await apiFetch(
+                    "/api/state/results-reveal",
+                    {
+                      method: "PUT",
+                      body: JSON.stringify({ revealed: !state?.resultsRevealed }),
+                    },
+                    token
+                  );
+                  await loadState();
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Failed to update projector");
+                } finally {
+                  setIsUpdating(false);
+                }
+              })();
+            }}
+          >
+            {state?.resultsRevealed ? "Hide projector results" : "Show projector results"}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" asChild>
+            <a href="/admin/results">Open results page</a>
+          </Button>
+        </div>
+      </div>
+
       <div className="gold-border-card p-4">
         <Label className="mb-2 block text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           Matrix Category

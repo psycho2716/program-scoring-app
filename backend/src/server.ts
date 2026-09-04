@@ -10,6 +10,7 @@ import stateRoutes, { setStateBroadcaster } from "./routes/state.routes";
 import scoresRoutes, { setScoreBroadcasters } from "./routes/scores.routes";
 import tabulationRoutes from "./routes/tabulation.routes";
 import adminRoutes from "./routes/admin.routes";
+import resultsRoutes from "./routes/results.routes";
 import { getEventSettings } from "./services/settingsService";
 import { initSocket } from "./socket/index";
 
@@ -63,6 +64,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/state", stateRoutes);
 app.use("/api/scores", scoresRoutes);
 app.use("/api/tabulation", tabulationRoutes);
+app.use("/api/results", resultsRoutes);
 app.use("/api/admin", adminRoutes);
 
 httpServer.listen(env.port, env.host, () => {

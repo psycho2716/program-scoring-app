@@ -2,12 +2,14 @@ import { RowDataPacket } from "mysql2";
 import { pool } from "../db/pool";
 import {
   CandidateGender,
+  CrownPlacement,
+  CrownResultsDisplay,
   DualWinners,
   MatrixCell,
   TabulationRow,
   WinnerInfo,
 } from "../types";
-import { getAllCategories } from "./stateService";
+import { getAllCategories, getSystemState } from "./stateService";
 import { calculateWeightedScore, getEventSettings } from "./settingsService";
 
 interface RawScoreRow extends RowDataPacket {
@@ -22,6 +24,7 @@ interface CandidateRow extends RowDataPacket {
   gender: CandidateGender;
   name: string;
   department: string;
+  photo_url?: string | null;
 }
 
 interface MatrixRow extends RowDataPacket {
@@ -339,6 +342,74 @@ export async function getWinnerInfo(): Promise<DualWinners> {
   return {
     male: pickWinner("male"),
     female: pickWinner("female"),
+  };
+}
+
+export const PAGEANT_RESULTS_YEAR = 2026;
+
+export function crownHonorific(rank: number): string {
+  if (rank === 1) return "Grand Winner";
+  if (rank === 2) return "1st Runner-Up";
+  if (rank === 3) return "2nd Runner-Up";
+  if (rank === 4) return "3rd Runner-Up";
+  return `Rank ${rank}`;
+}
+
+export function crownTitle(rank: number, gender: CandidateGender, year = PAGEANT_RESULTS_YEAR): string {
+  if (rank === 1) {
+    return gender === "female" ? `Miss Katimugan ${year}` : `Mr. Katimugan ${year}`;
+  }
+  return crownHonorific(rank);
+}
+
+export async function getCrownResultsDisplay(options?: {
+  includePlacements?: boolean;
+}): Promise<CrownResultsDisplay> {
+  const settings = await getEventSettings();
+  const state = await getSystemState();
+  const includePlacements = options?.includePlacements ?? state.resultsRevealed;
+
+  const empty: CrownResultsDisplay = {
+    revealed: state.resultsRevealed,
+    pageantName: settings.pageantName,
+    year: PAGEANT_RESULTS_YEAR,
+    female: [],
+    male: [],
+  };
+
+  if (!includePlacements) {
+    return empty;
+  }
+
+  const tabulation = await getTabulation();
+  const [photos] = await pool.query<CandidateRow[]>(
+    "SELECT id, candidate_number, gender, name, department, photo_url FROM candidates"
+  );
+  const photoById = new Map(photos.map((row) => [row.id, row.photo_url ?? null]));
+
+  const pickTop = (gender: CandidateGender): CrownPlacement[] =>
+    tabulation
+      .filter((row) => row.gender === gender)
+      .sort((a, b) => a.rank - b.rank)
+      .filter((row) => row.rank >= 1 && row.rank <= 4)
+      .slice(0, 4)
+      .map((row) => ({
+        candidateId: row.candidateId,
+        candidateNumber: row.candidateNumber,
+        gender: row.gender,
+        name: row.name,
+        department: row.department,
+        photoUrl: photoById.get(row.candidateId) ?? null,
+        finalScore: Number(row.finalScore) || 0,
+        rank: row.rank,
+        honorific: crownHonorific(row.rank),
+        title: crownTitle(row.rank, row.gender),
+      }));
+
+  return {
+    ...empty,
+    female: pickTop("female"),
+    male: pickTop("male"),
   };
 }
 

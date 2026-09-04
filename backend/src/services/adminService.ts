@@ -541,6 +541,7 @@ export async function resetAllScores(): Promise<{ clearedScoreRows: number }> {
     clearedScoreRows = Number(scoreResult.affectedRows ?? 0);
 
     await connection.query("DELETE FROM candidate_results");
+    await connection.query("UPDATE system_state SET results_revealed = 0 WHERE id = 1");
     await connection.commit();
   } catch (error) {
     await connection.rollback();

@@ -13,6 +13,7 @@ interface CategoryRow extends RowDataPacket {
 interface StateRow extends RowDataPacket {
   active_category_id: number | null;
   is_scoring_open: boolean;
+  results_revealed: boolean;
 }
 
 function mapCategory(row: CategoryRow): Category {
@@ -34,12 +35,17 @@ export async function getAllCategories(): Promise<Category[]> {
 
 export async function getSystemState(): Promise<SystemState> {
   const [stateRows] = await pool.query<StateRow[]>(
-    "SELECT active_category_id, is_scoring_open FROM system_state WHERE id = 1"
+    "SELECT active_category_id, is_scoring_open, results_revealed FROM system_state WHERE id = 1"
   );
 
   const state = stateRows[0];
   if (!state) {
-    return { activeCategoryId: null, isScoringOpen: false, activeCategory: null };
+    return {
+      activeCategoryId: null,
+      isScoringOpen: false,
+      resultsRevealed: false,
+      activeCategory: null,
+    };
   }
 
   let activeCategory: Category | null = null;
@@ -56,6 +62,7 @@ export async function getSystemState(): Promise<SystemState> {
   return {
     activeCategoryId: state.active_category_id,
     isScoringOpen: Boolean(state.is_scoring_open),
+    resultsRevealed: Boolean(state.results_revealed),
     activeCategory,
   };
 }
@@ -69,6 +76,13 @@ export async function updateSystemState(
     { activeCategoryId, isScoringOpen: isScoringOpen ? 1 : 0 }
   );
 
+  return getSystemState();
+}
+
+export async function setResultsRevealed(revealed: boolean): Promise<SystemState> {
+  await pool.query("UPDATE system_state SET results_revealed = :revealed WHERE id = 1", {
+    revealed: revealed ? 1 : 0,
+  });
   return getSystemState();
 }
 

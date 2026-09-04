@@ -14,6 +14,7 @@ import type { ApiResponse, AppNavKey, EventSettings } from "@/types";
 function resolveAdminNav(pathname: string): AppNavKey {
   if (pathname.startsWith("/admin/overview")) return "overview";
   if (pathname.startsWith("/admin/leaderboard")) return "leaderboard";
+  if (pathname.startsWith("/admin/results")) return "results";
   return "judging";
 }
 

@@ -6,7 +6,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "hash-password": "tsx scripts/hash-password.ts"
+    "hash-password": "tsx scripts/hash-password.ts",
+    "seed-smoke-scores": "tsx scripts/seed-smoke-scores.ts"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

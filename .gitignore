@@ -6,4 +6,5 @@ dist/
 backend/.env
 backend/uploads/
 *.log
+logs/
 .DS_Store

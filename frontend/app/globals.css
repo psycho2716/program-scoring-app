@@ -64,6 +64,14 @@
       linear-gradient(180deg, #07131c 0%, #0c1c28 50%, #08141c 100%);
   }
 
+  .results-stage {
+    background:
+      radial-gradient(ellipse 70% 45% at 50% 0%, rgba(212, 160, 30, 0.16), transparent 55%),
+      radial-gradient(ellipse 40% 40% at 12% 80%, rgba(20, 140, 120, 0.16), transparent 50%),
+      radial-gradient(ellipse 40% 40% at 88% 70%, rgba(30, 90, 110, 0.2), transparent 50%),
+      linear-gradient(180deg, #061018 0%, #0a1c28 42%, #07141c 100%);
+  }
+
   .login-bg {
     background:
       radial-gradient(ellipse 70% 55% at 50% 45%, rgba(18, 70, 65, 0.55), transparent 70%),

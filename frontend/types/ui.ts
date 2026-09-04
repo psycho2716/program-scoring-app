@@ -11,11 +11,11 @@ export interface CandidatePhotoProps {
   name: string;
   photoUrl?: string | null;
   candidateNumber?: number;
-  size?: "sm" | "md" | "lg" | "hero";
+  size?: "sm" | "md" | "lg" | "hero" | "crown";
   className?: string;
 }
 
-export type AppNavKey = "judging" | "overview" | "leaderboard";
+export type AppNavKey = "judging" | "overview" | "leaderboard" | "results";
 
 export interface AppNavItem {
   key: AppNavKey;

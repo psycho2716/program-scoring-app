@@ -7,6 +7,7 @@ const sizeClasses = {
   sm: "h-9 w-9",
   md: "h-12 w-12",
   lg: "h-16 w-16",
+  crown: "h-[9.5rem] w-[9.5rem] md:h-[11.5rem] md:w-[11.5rem]",
   hero: "h-full w-full min-h-[280px]",
 } as const;
 
@@ -35,7 +36,7 @@ export function CandidatePhoto({
           fill
           className="object-cover"
           unoptimized
-          sizes={size === "hero" ? "800px" : "96px"}
+          sizes={size === "hero" ? "800px" : size === "crown" ? "200px" : "96px"}
         />
         {size === "hero" && (
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-black/20" />
@@ -54,8 +55,8 @@ export function CandidatePhoto({
       style={{ background: candidatePlaceholderGradient(seed) }}
       aria-label={name}
     >
-      <span className={cn(size === "hero" ? "text-5xl tracking-widest text-white/40" : "text-xs")}>
-        {size === "hero"
+      <span className={cn(size === "hero" ? "text-5xl tracking-widest text-white/40" : size === "crown" ? "text-3xl text-white/50" : "text-xs")}>
+        {size === "hero" || size === "crown"
           ? candidateNumber != null
             ? `#${String(candidateNumber).padStart(2, "0")}`
             : initials

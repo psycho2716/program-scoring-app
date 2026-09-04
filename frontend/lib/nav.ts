@@ -4,6 +4,7 @@ export const ADMIN_NAV: AppNavItem[] = [
   { key: "judging", label: "Judging", href: "/admin" },
   { key: "overview", label: "Overview", href: "/admin/overview" },
   { key: "leaderboard", label: "Leaderboard", href: "/admin/leaderboard" },
+  { key: "results", label: "Results", href: "/admin/results" },
 ];
 
 /** Judge mockup shows Overview + Leaderboard only; console is reached via brand title. */

@@ -59,6 +59,7 @@ CREATE TABLE system_state (
   id INT PRIMARY KEY DEFAULT 1,
   active_category_id INT NULL,
   is_scoring_open BOOLEAN NOT NULL DEFAULT FALSE,
+  results_revealed BOOLEAN NOT NULL DEFAULT FALSE,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (active_category_id) REFERENCES categories(id) ON DELETE SET NULL,
   CONSTRAINT chk_single_state CHECK (id = 1)
@@ -127,7 +128,7 @@ UPDATE event_settings
 SET tiebreaker_category_id = (SELECT id FROM categories WHERE category_name = 'Question & Answer' LIMIT 1)
 WHERE id = 1;
 
-INSERT INTO system_state (id, active_category_id, is_scoring_open) VALUES (1, NULL, FALSE);
+INSERT INTO system_state (id, active_category_id, is_scoring_open, results_revealed) VALUES (1, NULL, FALSE, FALSE);
 
 INSERT INTO scores (judge_id, candidate_id, category_id, raw_score, is_submitted)
 SELECT j.id, c.id, cat.id, NULL, FALSE
