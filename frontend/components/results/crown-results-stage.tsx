@@ -178,10 +178,21 @@ export function CrownResultsStage({
         <p className="mt-2 text-sm text-zinc-400">Grand Winner · 1st · 2nd · 3rd Runner-Up</p>
       </header>
 
-      <div className="relative mx-auto grid max-w-6xl gap-8 lg:grid-cols-2 lg:gap-10">
-        <DivisionColumn gender="female" year={data.year} placements={data.female} />
-        <DivisionColumn gender="male" year={data.year} placements={data.male} />
-      </div>
+      {data.female.length === 0 && data.male.length === 0 ? (
+        <div className="relative mx-auto max-w-xl rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-10 text-center">
+          <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-rsu-gold">
+            Awaiting scores
+          </p>
+          <p className="mt-3 text-sm text-zinc-400">
+            No results yet. Grand Winners appear after judges submit scores.
+          </p>
+        </div>
+      ) : (
+        <div className="relative mx-auto grid max-w-6xl gap-8 lg:grid-cols-2 lg:gap-10">
+          <DivisionColumn gender="female" year={data.year} placements={data.female} />
+          <DivisionColumn gender="male" year={data.year} placements={data.male} />
+        </div>
+      )}
     </div>
   );
 }

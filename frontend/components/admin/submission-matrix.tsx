@@ -30,6 +30,9 @@ export function SubmissionMatrix({
       (cell) => cell.candidateId === candidateId && cell.judgeNumber === judgeNumber
     );
 
+  const inProgressCount = matrix.filter((cell) => cell.status === "in_progress").length;
+  const submittedCount = matrix.filter((cell) => cell.status === "submitted").length;
+
   return (
     <div className="gold-border-card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
@@ -51,13 +54,13 @@ export function SubmissionMatrix({
           </span>
           <span className="flex items-center gap-1.5">
             <span className="matrix-score-cell matrix-cell-progress !h-5 !min-w-[1.75rem] !px-1 text-[10px]">
-              8
+              {inProgressCount}
             </span>{" "}
             In Progress
           </span>
           <span className="flex items-center gap-1.5">
             <span className="matrix-score-cell matrix-cell-done !h-5 !min-w-[1.75rem] !px-1 text-[10px]">
-              9
+              {submittedCount}
             </span>{" "}
             Submitted
           </span>

@@ -80,16 +80,22 @@ function DivisionStandings({
 }) {
   const sorted = [...rows].sort((a, b) => a.rank - b.rank);
   const visible = compact ? sorted.slice(0, 4) : sorted;
-  const runnerUps = visible.filter((row) => row.rank !== 1);
+  const runnerUps = visible.filter(
+    (row) => row.rank !== 1 && Number(row.finalScore) > 0
+  );
 
   return (
     <div className="space-y-1.5">
       <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
         {title}
       </p>
-      {runnerUps.length === 0 && sorted.length <= 1 ? (
+      {runnerUps.length === 0 ? (
         <p className="rounded-xl bg-white/[0.02] px-3 py-2.5 text-sm text-muted-foreground">
-          {sorted.length === 0 ? "No candidates in this division." : "Only the leader so far."}
+          {sorted.length === 0
+            ? "No candidates in this division."
+            : sorted.every((row) => Number(row.finalScore) <= 0)
+              ? "No scores yet."
+              : "Only the leader so far."}
         </p>
       ) : (
         <ul className="space-y-1.5">
@@ -175,10 +181,12 @@ export function LeaderboardPanel({
         }
       : null);
     if (!source) return null;
+    const finalScore = Number(source.finalScore ?? 0) || 0;
+    if (finalScore <= 0) return null;
     return {
       ...source,
       gender: source.gender ?? gender,
-      finalScore: Number(source.finalScore ?? 0) || 0,
+      finalScore,
     };
   };
 

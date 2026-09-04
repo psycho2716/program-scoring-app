@@ -43,6 +43,16 @@ interface CompletionRow extends RowDataPacket {
   submitted: number;
 }
 
+async function countSubmittedScores(): Promise<number> {
+  const [completion] = await pool.query<CompletionRow[]>(
+    `SELECT COUNT(*) AS total,
+            SUM(CASE WHEN is_submitted = 1 AND raw_score IS NOT NULL THEN 1 ELSE 0 END) AS submitted
+     FROM scores s
+     INNER JOIN users u ON u.id = s.judge_id AND u.role = 'judge'`
+  );
+  return Number(completion[0]?.submitted ?? 0);
+}
+
 let recalculationLock: Promise<void> = Promise.resolve();
 
 async function withRecalculationLock<T>(operation: () => Promise<T>): Promise<T> {
@@ -274,13 +284,16 @@ export async function getSubmissionMatrix(categoryId: number): Promise<MatrixCel
     { categoryId }
   );
 
+  const hasScore = (value: number | null | undefined) => value != null && Number.isFinite(Number(value));
+  const isSubmitted = (value: boolean | number | null | undefined) => Number(value) === 1;
+
   const judgeCategoryStatus = new Map<number, { filled: number; submitted: boolean }>();
 
   for (const row of rows) {
     if (!judgeCategoryStatus.has(row.judge_id)) {
       const judgeRows = rows.filter((r) => r.judge_id === row.judge_id);
-      const filled = judgeRows.filter((r) => r.raw_score !== null).length;
-      const submitted = judgeRows.every((r) => r.is_submitted);
+      const filled = judgeRows.filter((r) => hasScore(r.raw_score)).length;
+      const submitted = judgeRows.length > 0 && judgeRows.every((r) => isSubmitted(r.is_submitted));
       judgeCategoryStatus.set(row.judge_id, { filled, submitted });
     }
   }
@@ -289,9 +302,9 @@ export async function getSubmissionMatrix(categoryId: number): Promise<MatrixCel
     const judgeStatus = judgeCategoryStatus.get(row.judge_id);
     let status: MatrixCell["status"] = "not_started";
 
-    if (row.is_submitted) {
+    if (isSubmitted(row.is_submitted)) {
       status = "submitted";
-    } else if (row.raw_score !== null || (judgeStatus && judgeStatus.filled > 0)) {
+    } else if (hasScore(row.raw_score) || (judgeStatus && judgeStatus.filled > 0)) {
       status = "in_progress";
     }
 
@@ -303,12 +316,17 @@ export async function getSubmissionMatrix(categoryId: number): Promise<MatrixCel
       gender: row.gender,
       categoryId: row.category_id ?? categoryId,
       status,
-      rawScore: row.raw_score == null ? null : Number(row.raw_score),
+      rawScore: hasScore(row.raw_score) ? Number(row.raw_score) : null,
     };
   });
 }
 
 export async function getWinnerInfo(): Promise<DualWinners> {
+  const submittedCount = await countSubmittedScores();
+  if (submittedCount === 0) {
+    return { male: null, female: null };
+  }
+
   const tabulation = await getTabulation();
 
   const [completion] = await pool.query<CompletionRow[]>(
@@ -326,7 +344,7 @@ export async function getWinnerInfo(): Promise<DualWinners> {
     const winner = tabulation
       .filter((row) => row.gender === gender)
       .sort((a, b) => a.rank - b.rank)[0];
-    if (!winner) return null;
+    if (!winner || Number(winner.finalScore) <= 0) return null;
 
     return {
       candidateId: winner.candidateId,
@@ -378,6 +396,10 @@ export async function getCrownResultsDisplay(options?: {
   };
 
   if (!includePlacements) {
+    return empty;
+  }
+
+  if ((await countSubmittedScores()) === 0) {
     return empty;
   }
 

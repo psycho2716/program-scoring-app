@@ -40,7 +40,7 @@ export default function ProjectorResultsPage() {
     return () => window.clearInterval(id);
   }, [load]);
 
-  if (!data.revealed) {
+  if (!data.revealed || (data.female.length === 0 && data.male.length === 0)) {
     return <ResultsHoldingScreen pageantName={data.pageantName} year={data.year} />;
   }
 

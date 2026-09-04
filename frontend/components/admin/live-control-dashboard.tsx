@@ -98,6 +98,8 @@ export function LiveControlDashboard({ token }: LiveControlDashboardProps) {
     enabled: Boolean(token),
     onStateUpdate: () => {
       loadState();
+      if (matrixCategoryId) loadMatrix(matrixCategoryId);
+      void refresh();
     },
     onScoreProgress: () => {
       if (matrixCategoryId) loadMatrix(matrixCategoryId);
